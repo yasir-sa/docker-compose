@@ -1,38 +1,57 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import API from '../api'
 import './Todo.css'
 
-const sampleTodos = [
-  { id: 1, text: 'Buy groceries', completed: false },
-  { id: 2, text: 'Read a book', completed: true },
-  { id: 3, text: 'Go for a walk', completed: false },
-]
-
 function Todo() {
-  const [todos, setTodos] = useState(sampleTodos)
+  const [todos, setTodos] = useState([])
   const [input, setInput] = useState('')
   const [editId, setEditId] = useState(null)
   const [editText, setEditText] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    fetch(`${API}/todos`)
+      .then(res => res.json())
+      .then(data => setTodos(data))
+      .catch(() => setError('Could not connect to the server.'))
+      .finally(() => setLoading(false))
+  }, [])
 
   const addTodo = () => {
     const trimmed = input.trim()
     if (!trimmed) return
-    setTodos([...todos, { id: Date.now(), text: trimmed, completed: false }])
+    fetch(`${API}/todos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: trimmed }),
+    })
+      .then(res => res.json())
+      .then(newTodo => setTodos(prev => [...prev, newTodo]))
     setInput('')
   }
 
   const deleteTodo = (id) => {
+    fetch(`${API}/todos/${id}`, { method: 'DELETE' })
     setTodos(todos.filter(t => t.id !== id))
   }
 
   const startEdit = (todo) => {
     setEditId(todo.id)
-    setEditText(todo.text)
+    setEditText(todo.task)
   }
 
   const saveEdit = () => {
     const trimmed = editText.trim()
     if (!trimmed) return
-    setTodos(todos.map(t => t.id === editId ? { ...t, text: trimmed } : t))
+    const todo = todos.find(t => t.id === editId)
+    fetch(`${API}/todos/${editId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: trimmed, completed: todo.completed }),
+    })
+      .then(res => res.json())
+      .then(updated => setTodos(todos.map(t => t.id === editId ? updated : t)))
     setEditId(null)
     setEditText('')
   }
@@ -42,8 +61,14 @@ function Todo() {
     setEditText('')
   }
 
-  const toggleComplete = (id) => {
-    setTodos(todos.map(t => t.id === id ? { ...t, completed: !t.completed } : t))
+  const toggleComplete = (todo) => {
+    fetch(`${API}/todos/${todo.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: todo.task, completed: !todo.completed }),
+    })
+      .then(res => res.json())
+      .then(updated => setTodos(todos.map(t => t.id === todo.id ? updated : t)))
   }
 
   const handleInputKey = (e) => {
@@ -78,7 +103,20 @@ function Todo() {
         </div>
 
         <div className="todo-list">
-          {todos.length === 0 && (
+          {loading && (
+            <div className="empty-state">
+              <p>Loading tasks...</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="empty-state">
+              <span>⚠️</span>
+              <p>{error}</p>
+            </div>
+          )}
+
+          {!loading && !error && todos.length === 0 && (
             <div className="empty-state">
               <span>🎉</span>
               <p>All done! Add a new task above.</p>
@@ -109,9 +147,9 @@ function Todo() {
                       type="checkbox"
                       className="todo-checkbox"
                       checked={todo.completed}
-                      onChange={() => toggleComplete(todo.id)}
+                      onChange={() => toggleComplete(todo)}
                     />
-                    <span className="todo-text">{todo.text}</span>
+                    <span className="todo-text">{todo.task}</span>
                   </div>
                   <div className="todo-actions">
                     <button className="btn btn-edit" onClick={() => startEdit(todo)}>Edit</button>
