@@ -86,7 +86,7 @@ function Todo() {
     <div className="todo-wrapper">
       <div className="todo-card">
         <div className="todo-header">
-          <h1>My Todo List</h1>
+          <h1>yasir Todo List</h1>
           <p>{completed} of {todos.length} {todos.length === 1 ? 'task' : 'tasks'} completed</p>
         </div>
 
