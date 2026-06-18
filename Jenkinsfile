@@ -34,6 +34,12 @@ pipeline {
             }
         }
 
+        stage('Test') {
+            steps {
+                sh 'docker compose -f ${COMPOSE_FILE} run --rm --no-deps server npm test'
+            }
+        }
+
         stage('Deploy') {
             steps {
                 // Bring up only the app services, not Jenkins itself.
