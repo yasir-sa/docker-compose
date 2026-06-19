@@ -62,6 +62,13 @@ pipeline {
 
     post {
         success {
+            withCredentials([
+                string(credentialsId: 'render-frontend-hook', variable: 'FRONTEND_HOOK'),
+                string(credentialsId: 'render-backend-hook', variable: 'BACKEND_HOOK')
+            ]) {
+                sh 'curl -X POST "$FRONTEND_HOOK"'
+                sh 'curl -X POST "$BACKEND_HOOK"'
+            }
             echo '✅ Build and deployment succeeded. All services are running.'
         }
         failure {
